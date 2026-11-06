@@ -4,12 +4,20 @@ Demonstração de gestão financeira pessoal para portfólio, desenvolvida por *
 
 ## Links do projeto
 
-- **Demonstração:** a preencher após publicação autorizada no Netlify.
+- **Demonstração:** [gestor-financeiro-michel.netlify.app](https://gestor-financeiro-michel.netlify.app).
 - **Código-fonte:** [michelfiquene1-cmyk/gestor-financeiro](https://github.com/michelfiquene1-cmyk/gestor-financeiro).
 
 ## Objetivo
 
 Demonstrar desenvolvimento de interfaces responsivas, manipulação de dados no navegador, cálculos monetários, acessibilidade e tratamento de falhas, utilizando exclusivamente dados fictícios. O projeto não substitui um sistema financeiro de produção.
+
+## Demonstração online
+
+**[Acessar o Gestor Financeiro](https://gestor-financeiro-michel.netlify.app)**
+
+Disponibilidade: na verificação de 5 de novembro de 2026, o endereço informado retornou “Not Found” do Netlify. A confirmação do endereço e da disponibilidade da demonstração está pendente.
+
+Explore o sistema com dados fictícios. Os lançamentos ficam apenas no armazenamento local do seu navegador (`localStorage`), sem sincronização entre dispositivos. Não insira informações financeiras reais ou dados pessoais sensíveis.
 
 ## Funcionalidades
 
@@ -74,7 +82,7 @@ Execute estes passos somente após aprovar a publicação e confirmar a conta pe
 3. No Netlify, importe o repositório pelo provedor GitHub.
 4. Mantenha o comando de build em branco e o diretório de publicação como ponto (.). O arquivo netlify.toml já define esse diretório.
 5. Após o deploy, confira HTTPS, carregamento dos arquivos, console, armazenamento, exportação e cabeçalhos de segurança na URL publicada.
-6. Preencha o link da demonstração acima. Atualizações enviadas à branch configurada poderão disparar novos deploys.
+6. Mantenha o link da demonstração atualizado. Atualizações enviadas à branch configurada poderão disparar novos deploys.
 
 **Envio manual:** também é possível enviar a pasta revisada pelo Netlify Drop, sem GitHub. O .gitignore protege o versionamento Git; ele não deve ser tratado como barreira de segurança para uploads manuais. Confira o conteúdo enviado e não inclua arquivos locais ou confidenciais.
 
