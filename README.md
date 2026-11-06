@@ -15,8 +15,6 @@ Demonstrar desenvolvimento de interfaces responsivas, manipulação de dados no 
 
 **[Acessar o Gestor Financeiro](https://gestor-financeiro-michel.netlify.app)**
 
-Disponibilidade: na verificação de 5 de novembro de 2026, o endereço informado retornou “Not Found” do Netlify. A confirmação do endereço e da disponibilidade da demonstração está pendente.
-
 Explore o sistema com dados fictícios. Os lançamentos ficam apenas no armazenamento local do seu navegador (`localStorage`), sem sincronização entre dispositivos. Não insira informações financeiras reais ou dados pessoais sensíveis.
 
 ## Funcionalidades
