@@ -52,3 +52,4 @@ downloads/
 coverage/
 test-results/
 playwright-report/
+.preview/

@@ -7,9 +7,12 @@ const http = require('node:http');
 const {spawn} = require('node:child_process');
 const assert = require('node:assert/strict');
 const root = path.join(__dirname, '..');
+const captures=path.join(root,'.preview');
 const chrome = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function main() {
+  const publishedURL=process.env.GESTOR_TEST_URL;
+  if(publishedURL && publishedURL!=='https://gestor-financeiro-michel.netlify.app') throw Error('Public browser test restricted to the existing authorized site');
   const server = http.createServer((req, res) => {
     const name = req.url === '/' ? 'index.html' : req.url.slice(1);
     if (!['index.html', 'app.js', 'styles.css'].includes(name)) { res.writeHead(404).end(); return; }
@@ -48,7 +51,9 @@ async function main() {
     };
     await send('Runtime.enable');
     await send('Page.enable');
-    await send('Page.navigate', {url: 'http://127.0.0.1:' + server.address().port});
+    const targetURL=publishedURL || 'http://127.0.0.1:' + server.address().port;
+    console.log('Browser test target: '+targetURL);
+    await send('Page.navigate', {url: targetURL});
     for (let i = 0; i < 100; i++) {
       if (await evaluate("document.readyState==='complete' && typeof transactions!=='undefined'")) break;
       await wait(50);
@@ -58,6 +63,12 @@ async function main() {
     await evaluate("$('monthFilter').value='';$('monthFilter').dispatchEvent(new Event('change'))");
     assert.equal(await evaluate("$('monthFilter').value"), await evaluate('today().slice(0,7)'));
     console.log('PASS browser dashboard and empty month');
+    await evaluate('window.legacyOriginal=JSON.stringify(transactions);localStorage.setItem(LEGACY_KEY,window.legacyOriginal)');
+    await send('Page.reload');
+    for(let i=0;i<100;i++){await wait(50);if(await evaluate("document.readyState==='complete' && typeof transactions!=='undefined'"))break;}
+    assert.equal(await evaluate('localStorage.getItem(STORAGE_KEY)'),null);
+    assert.equal(await evaluate('transactions.length'),48);
+    const originalLegacy=await evaluate('localStorage.getItem(LEGACY_KEY)');
 
     await evaluate("$('addBtn').focus();$('addBtn').click()");
     assert.equal(await evaluate('document.activeElement.id'), 'description');
@@ -81,6 +92,48 @@ async function main() {
     await evaluate("setView('reports')");
     assert.ok(await evaluate("$('reportAccounts').textContent.includes('Conta pessoal')"));
     console.log('PASS browser add, edit, search, reports and focus after rerender');
+
+    await evaluate("setView('accounts');$('manageAdd').click()");
+    assert.equal(await evaluate('document.activeElement.id'),'entityName');
+    await evaluate("$('entityForm').querySelector('[type=submit]').focus()");
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+    assert.equal(await evaluate('document.activeElement.id'),'entityClose');
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9,modifiers:8});
+    assert.equal(await evaluate('document.activeElement.type'),'submit');
+    await evaluate("$('entityName').value='Conta fictícia nova';$('entityForm').requestSubmit()");
+    assert.equal(await evaluate("ACCOUNTS.includes('Conta fictícia nova')"),true);
+    await evaluate("openEntity('accounts','Conta fictícia nova');$('entityName').value='Conta fictícia editada';$('entityForm').requestSubmit()");
+    assert.equal(await evaluate("ACCOUNTS.includes('Conta fictícia editada')"),true);
+    await evaluate("openEntity('accounts','Conta fictícia editada','delete');$('entityForm').requestSubmit()");
+    assert.equal(await evaluate("ACCOUNTS.includes('Conta fictícia editada')"),false);
+    await evaluate("setView('categories');$('manageAdd').click();$('entityName').value='Categoria fictícia';$('entityKeywords').value='teste novo';$('entityForm').requestSubmit()");
+    assert.equal(await evaluate("EXPENSE_CATEGORIES.includes('Categoria fictícia')"),true);
+    await evaluate("$('addBtn').click();$('description').value='Teste novo na Loja Aurora';$('description').dispatchEvent(new Event('input'))");
+    assert.notEqual(await evaluate("$('category').value"),'Categoria fictícia');
+    assert.equal(await evaluate("$('establishment').value"),'');
+    await evaluate("$('applySuggestion').click()");
+    assert.equal(await evaluate("$('establishment').value"),'Loja Aurora');
+    await evaluate("$('establishment').value='Loja fictícia';$('applySuggestion').click()");
+    assert.equal(await evaluate("$('establishment').value"),'Loja fictícia');
+    await evaluate("$('amount').value='7.50';$('transactionForm').requestSubmit()");
+    assert.equal(await evaluate("transactions.at(-1).category"),'Categoria fictícia');
+    await evaluate("openEntity('categories','Categoria fictícia','delete');$('replacement').value='Outros';$('entityForm').requestSubmit()");
+    assert.equal(await evaluate("transactions.at(-1).category"),'Outros');
+    await evaluate("setView('transactions');$('searchInput').value='loja ficticia';$('categoryFilter').value='Outros';$('accountFilter').value=ACCOUNTS[0];renderTransactions()");
+    assert.equal(await evaluate("document.querySelectorAll('#allRows [data-edit]').length"),1);
+    await send('Page.reload');
+    for(let i=0;i<100;i++){await wait(50);if(await evaluate("document.readyState==='complete' && typeof transactions!=='undefined'"))break;}
+    assert.equal(await evaluate("transactions.at(-1).establishment"),'Loja fictícia');
+    assert.equal(await evaluate('validTransactions(transactions)'),true);
+    await evaluate("setView('categories');$('manageAdd').click();$('entityName').value='Não gravar';window.entityBefore=JSON.stringify(catalog);window.entitySet=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw Error('quota')};$('entityForm').requestSubmit()");
+    assert.equal(await evaluate('JSON.stringify(catalog)===window.entityBefore'),true);
+    assert.equal(await evaluate("$('entityBackdrop').classList.contains('hidden')"),false);
+    await evaluate('Storage.prototype.setItem=window.entitySet');
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+    assert.equal(await evaluate('document.activeElement.id'),'manageAdd');
+    console.log('PASS browser accounts, categories, safe transfer, explicit suggestion, merchant filters, reload and catalog quota failure');
+    assert.equal(await evaluate('localStorage.getItem(LEGACY_KEY)'),originalLegacy);
+    assert.equal(await evaluate('JSON.parse(localStorage.getItem(STORAGE_KEY)).version'),3);
 
     const downloads = path.join(profile, 'downloads');
     fs.mkdirSync(downloads);
@@ -108,24 +161,44 @@ async function main() {
       assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'), 'Overflow dashboard ' + width);
       await evaluate("setView('transactions')");
       assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'), 'Overflow transactions ' + width);
-      await evaluate("setView('reports')");
-      assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'), 'Overflow reports ' + width);
+      for(const view of ['reports','accounts','categories']){
+        await evaluate('setView('+JSON.stringify(view)+')');
+        assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'), 'Overflow '+view+' '+width);
+      }
+      await evaluate("$('manageAdd').click()");
+      assert.ok(await evaluate("$('entityBackdrop').querySelector('.modal').getBoundingClientRect().right<=innerWidth"));
+      assert.ok(await evaluate("$('entityBackdrop').querySelector('.modal').getBoundingClientRect().bottom<=innerHeight"));
+      await evaluate('closeEntity()');
       await evaluate("$('addBtn').click()");
       assert.ok(await evaluate("document.querySelector('.modal').getBoundingClientRect().right<=innerWidth"));
       await evaluate('closeModal()');
     }
-    await evaluate("setView('dashboard')");
-    fs.writeFileSync(path.join(profile, 'mobile.png'), Buffer.from((await send('Page.captureScreenshot', {format: 'png'})).data, 'base64'));
+    await evaluate("transactions=sampleData();setView('dashboard');$('toast').classList.remove('show')");
+    await wait(250); // Finish the toast fade before visual captures.
+    fs.mkdirSync(captures,{recursive:true});
+    fs.writeFileSync(path.join(captures, 'mobile.png'), Buffer.from((await send('Page.captureScreenshot', {format: 'png'})).data, 'base64'));
+    await evaluate("$('menuToggle').click()");
+    assert.equal(await evaluate("$('menuToggle').getAttribute('aria-expanded')"),'true');
+    await wait(250); // Wait for the actual drawer transition before geometry checks.
+    assert.equal(await evaluate("$('sidebar').getBoundingClientRect().left"),0);
+    await evaluate("document.querySelector('[data-view=accounts]').click()");
+    assert.equal(await evaluate("$('menuToggle').getAttribute('aria-expanded')"),'false');
+    await evaluate("$('manageAdd').click()");
+    fs.writeFileSync(path.join(captures,'mobile-account-form.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+    await evaluate("closeEntity();$('addBtn').click()");
+    fs.writeFileSync(path.join(captures,'mobile-form.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+    await evaluate("closeModal();setView('dashboard')");
     await send('Emulation.setDeviceMetricsOverride', {width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false});
-    fs.writeFileSync(path.join(profile, 'desktop.png'), Buffer.from((await send('Page.captureScreenshot', {format: 'png'})).data, 'base64'));
+    fs.writeFileSync(path.join(captures, 'desktop.png'), Buffer.from((await send('Page.captureScreenshot', {format: 'png'})).data, 'base64'));
     await evaluate("transactions=[];renderFlow()");
     assert.equal(await evaluate("[...document.querySelectorAll('.bar')].every(e=>e.getBoundingClientRect().height===0)"), true);
     assert.deepEqual(errors, []);
     console.log('PASS browser nine-category legend, zero bars, responsive layouts and no runtime exceptions');
-    console.log('Screenshots: ' + profile);
-    for (const view of ['transactions', 'reports', 'form']) {
+    console.log('Screenshots: ' + captures);
+    await evaluate('transactions=sampleData();render()');
+    for (const view of ['transactions', 'reports', 'accounts', 'categories', 'form']) {
       await evaluate(view === 'form' ? "$('addBtn').click()" : 'setView(' + JSON.stringify(view) + ')');
-      fs.writeFileSync(path.join(profile, view + '.png'), Buffer.from((await send('Page.captureScreenshot', {format: 'png'})).data, 'base64'));
+      fs.writeFileSync(path.join(captures, view + '.png'), Buffer.from((await send('Page.captureScreenshot', {format: 'png'})).data, 'base64'));
       if (view === 'form') await evaluate('closeModal()');
     }
     const raw = '{invalid';

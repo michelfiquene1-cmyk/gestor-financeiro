@@ -6,13 +6,13 @@ const source = fs.readFileSync(require('node:path').join(__dirname, '../app.js')
 const core = source.slice(0, source.indexOf("$('monthFilter').value=today()"));
 let checks = 0;
 function test(name, fn) { fn(); checks++; console.log('PASS ' + name); }
-function setup(stored = null) {
+function setup(stored = null, legacy = null) {
   const elements = {};
-  const storage = {raw: stored, fail: false, readFail: false, writes: 0};
+  const storage = {raw: stored, legacy, fail: false, readFail: false, writes: 0};
   const context = {Intl, Date, setTimeout: () => 0, clearTimeout() {}, console,
     localStorage: {
-      getItem() { if (storage.readFail) throw Error('denied'); return storage.raw; },
-      setItem(key, value) { if (storage.fail) throw Error('quota'); storage.raw = value; storage.writes++; }
+      getItem(key) { if (storage.readFail) throw Error('denied'); return key.endsWith('v1') ? storage.legacy ?? null : storage.raw; },
+      setItem(key, value) { if (storage.fail) throw Error('quota'); if(!storage.ignore) storage.raw = value; storage.writes++; }
     },
     document: {getElementById(id) { return elements[id] ||= {value: '', textContent: '', innerHTML: '', style: {},
       classList: {add() {}, remove() {}}}; }}
@@ -49,7 +49,7 @@ test('Successful add/edit/delete/restore and reload', () => {
   t.run("$('editId').value='49';$('description').value='Editado';saveTransaction({preventDefault(){}})");
   assert.equal(setup(t.storage.raw).run('transactions[48].description'), 'Editado');
   t.run('deleteTransaction(49)'); assert.equal(setup(t.storage.raw).run('transactions.length'), 48);
-  t.run('restoreSampleData()'); assert.equal(t.storage.raw, base);
+  t.run('restoreSampleData()'); assert.equal(setup(t.storage.raw).run('JSON.stringify(transactions)'), base);
 });
 test('Concurrent storage change and read errors prevent overwrites', () => {
   for (const failRead of [false, true]) {
@@ -117,3 +117,66 @@ test('Form rejects fractional cents, impossible dates and HTML is escaped', () =
   assert.equal(t.run("escapeHTML('<script>')"), '&lt;script&gt;');
 });
 console.log(checks + ' regression scenarios passed. Browser and spreadsheet tests are separate.');
+test('V1 migration is lazy, preserves original, and reloads V3 metadata',()=>{
+  const t=setup(null,base); assert.equal(t.storage.writes,0);assert.equal(t.storage.raw,null);
+  t.form();t.run('saveTransaction({preventDefault(){}})');
+  assert.equal(t.storage.legacy,base);assert.equal(JSON.parse(t.storage.raw).version,3);
+  assert.equal(setup(t.storage.raw,base).run('transactions.length'),49);
+  const blocked=setup(null,'{broken');assert.equal(blocked.run('storageBlocked'),true);assert.equal(blocked.storage.writes,0);
+});
+function entity(t,kind,name,newName,type,operation='edit',replacement='') {
+  t.run('closeEntity=()=>{};refreshFilters=()=>{}');
+  t.run(`entityContext=${JSON.stringify({kind,name,operation})};$('entityName').value=${JSON.stringify(newName)};$('entityType').value=${JSON.stringify(type)};$('entityColor').value='#4275f5';$('entityIcon').value='▣';$('entityKeywords').value='teste, exemplo';$('replacement').value=${JSON.stringify(replacement)};saveEntity({preventDefault(){}})`);
+}
+test('Account add, rename references, reject deletion without destination, transfer and reload',()=>{
+  const t=setup(base);
+  entity(t,'accounts','','Conta fictícia','Conta digital');
+  assert.equal(t.run("ACCOUNTS.includes('Conta fictícia')"),true);
+  entity(t,'accounts','Conta pessoal','Principal fictícia','Conta corrente');
+  assert.equal(t.run("transactions.some(t=>t.account==='Conta pessoal')"),false);
+  const before=t.storage.raw;
+  entity(t,'accounts','Principal fictícia','','','delete');assert.equal(t.storage.raw,before);
+  entity(t,'accounts','Principal fictícia','','','delete','Conta fictícia');
+  assert.equal(setup(t.storage.raw).run('validTransactions(transactions)'),true);
+  assert.equal(t.run("ACCOUNTS.includes('Principal fictícia')"),false);
+});
+test('Category create, rename, type guard, safe transfer, keywords and failure atomicity',()=>{
+  const t=setup(base);entity(t,'categories','','Exemplo fictício','expense');
+  assert.equal(t.run("detectCategory('TESTE','expense').name"),'Exemplo fictício');
+  entity(t,'categories','Mercado','Mercado fictício','expense');
+  assert.equal(t.run("transactions.some(t=>t.category==='Mercado')"),false);
+  const before=t.storage.raw;
+  entity(t,'categories','Mercado fictício','Mercado fictício','income');assert.equal(t.storage.raw,before);
+  t.storage.fail=true;entity(t,'categories','Mercado fictício','','','delete','Exemplo fictício');assert.equal(t.storage.raw,before);
+  t.storage.fail=false;entity(t,'categories','Mercado fictício','','','delete','Exemplo fictício');
+  assert.equal(setup(t.storage.raw).run('validTransactions(transactions)'),true);
+});
+test('Merchant persistence, search, combined filters and CSV protection',()=>{
+  const t=setup(base);t.form();t.run("$('establishment').value='=Loja fictícia';saveTransaction({preventDefault(){}})");
+  assert.equal(setup(t.storage.raw).run('transactions[48].establishment'),'=Loja fictícia');
+  assert.ok(t.run('buildCSV(transactions)').includes("\"'=Loja fictícia\""));
+  t.run("$('typeFilter').value='expense';$('categoryFilter').value='Mercado';$('accountFilter').value=ACCOUNTS[0];$('searchInput').value='loja ficticia'");
+  assert.equal(t.run('filteredTransactions().length'),1);
+  t.run("$('searchInput').value='10,25'");assert.equal(t.run('filteredTransactions().length'),1);
+  t.run("$('accountFilter').value=ACCOUNTS[1]");assert.equal(t.run('filteredTransactions().length'),0);
+});
+test('Invalid catalog, versions, merchant and empty comparison handled',()=>{
+  const t=setup(base);
+  assert.equal(t.run("validTransactions([{...transactions[0],establishment:23}])"),false);
+  for(const data of [{version:99,catalog:t.run('catalog'),transactions:[]},{version:3,catalog:{accounts:[],categories:[]},transactions:[]}]) {
+    assert.equal(setup(JSON.stringify(data)).run('storageBlocked'),true);
+  }
+  assert.match(t.run('comparison(100,0)'),/Sem base/);
+  assert.match(t.run('comparison(0,0)'),/Sem movimentação/);
+  assert.equal(t.run('comparison(0,100)'),'-100,0% vs. mês anterior');
+  assert.equal(t.run("detectEstablishment('Compras no Mercado Aurora')"),'Mercado Aurora');
+  assert.equal(t.run("detectEstablishment('Sem estabelecimento')"),'');
+});
+test('Unconfirmed writes do not claim success; invalid V3 never falls back over V1',()=>{
+  const t=setup(base);t.form();t.storage.ignore=true;t.run('saveTransaction({preventDefault(){}})');
+  assert.equal(t.storage.raw,base);assert.equal(t.run('JSON.stringify(transactions)'),base);
+  assert.match(t.run("$('toast').textContent"),/confirmar/);
+  const invalid=setup('{invalid',base);assert.equal(invalid.run('storageBlocked'),true);
+  invalid.run('restoreSampleData()');assert.equal(invalid.storage.raw,'{invalid');assert.equal(invalid.storage.legacy,base);assert.equal(invalid.storage.writes,0);
+});
+console.log(checks+' total regression scenarios passed.');

@@ -23,7 +23,10 @@ Explore o sistema com dados fictícios. Os lançamentos ficam apenas no armazena
 - Gráfico de fluxo financeiro dos seis meses até o período selecionado.
 - Distribuição de despesas com legenda para todas as categorias presentes.
 - Cadastro, edição e exclusão de transações, com validação de campos.
-- Busca por descrição e filtro por tipo de transação.
+- Busca por descrição, estabelecimento e valor; filtros combinados por tipo, categoria e conta, mantendo todo o histórico.
+- Contas e categorias configuráveis: cadastro, edição e exclusão com transferência validada dos lançamentos vinculados.
+- Palavras-chave por categoria e sugestões editáveis de categoria e estabelecimento, aplicadas somente por ação explícita.
+- Resumo mensal com comparação ao mês anterior, indicadores, evolução de seis meses e relatórios originais.
 - Relatórios mensais por categoria e movimentação líquida por conta.
 - Exportação de todo o histórico em CSV com separador ponto e vírgula, BOM UTF-8 e proteção de campos contra interpretação como fórmulas.
 - 48 lançamentos fictícios iniciais e restauração mediante confirmação.
@@ -65,11 +68,15 @@ Com Node.js 24 ou superior e Chrome instalado, execute na raiz:
 
 Os testes de regressão cobrem persistência, validação, períodos inválidos, CSV, gráficos e cálculos com dados fictícios. O teste de navegador cobre os fluxos implementados, foco, teclado, falhas de armazenamento, download CSV e layouts de 320 a 1440 pixels.
 
-O teste de navegador inicia um servidor em loopback e usa um perfil temporário, sem acessar o perfil pessoal do usuário. Por padrão procura o Chrome no caminho habitual do Windows; a variável CHROME_PATH permite informar outro executável compatível. Capturas e downloads ficam no diretório temporário indicado no terminal. Nenhum teste publica o projeto.
+O teste de navegador inicia um servidor em loopback e usa um perfil temporário, sem acessar o perfil pessoal do usuário. Por padrão procura o Chrome no caminho habitual do Windows; a variável CHROME_PATH permite informar outro executável compatível. As capturas ficam em `.preview/`, ignorada pelo Git, e os downloads no perfil temporário. Nenhum teste publica o projeto.
+
+Para conferir o site publicado após um deploy autorizado, execute no PowerShell `$env:GESTOR_TEST_URL = 'https://gestor-financeiro-michel.netlify.app'` e depois `node tests/browser.cjs`. O teste usa o mesmo perfil temporário isolado e dados fictícios; altera somente o armazenamento desse perfil, sem publicar nem acessar os dados do seu navegador. Para voltar ao servidor local, use `$env:GESTOR_TEST_URL = ''`. O destino remoto é restrito ao site existente indicado acima.
 
 A importação do CSV em Excel/LibreOffice, o uso com leitor de tela, outros motores de navegador e dispositivos móveis físicos ainda precisam de validação. Consulte REQUISITOS.md para o escopo das evidências existentes.
 
 ## Publicação no Netlify
+
+A evolução visual V3 foi aprovada pelo usuário no Live Server. A integração da branch `redesign/v3-evolucao-local` à `main` e a atualização do repositório e do site existentes foram autorizadas em 7 de novembro de 2026, condicionadas à auditoria e aos testes. Não criar outro repositório, site ou domínio. Confirmar o commit remoto e o conteúdo servido no endereço público antes de declarar a publicação concluída.
 
 Execute estes passos somente após aprovar a publicação e confirmar a conta pessoal correta do GitHub.
 
@@ -88,6 +95,13 @@ O site não exige backend, banco online ou segredos. A compatibilidade local e a
 
 ## Integridade dos dados
 
+- **Compatibilidade V1 → V3:** a abertura lê a chave antiga `gestor-financeiro-portfolio-demo-v1` quando a chave V3 ainda não existe. Nenhum dado é regravado na abertura. A primeira alteração confirmada salva transações e cadastros juntos em `gestor-financeiro-portfolio-demo-v3`, com versão de formato 3. A chave V1 permanece intacta. Falhas e formatos inválidos bloqueiam a gravação sem substituição por exemplos.
+- A partir dessa primeira gravação, a V3 usa sua própria chave; alterações posteriores feitas na V1 não são mescladas automaticamente. Voltar ao código V1 mostra os dados da chave antiga, sem as edições da V3. Não há sincronização entre as versões. Preserve a mesma origem e porta do Live Server para continuar usando os mesmos dados locais.
+- Renomear uma conta ou categoria atualiza suas referências no histórico em uma única gravação. Excluir um cadastro utilizado exige selecionar um destino compatível; é possível cancelar e criar esse destino antes. Categorias utilizadas não podem trocar entre receita e despesa.
+- Restaurar exemplos exige confirmação e substitui os lançamentos e cadastros da V3 pelos padrões. A chave V1 permanece intacta.
+- O valor movimentado de uma conta é a soma das entradas e saídas do mês; a participação usa essa mesma base em todas as contas. O relatório líquido mantém receitas menos despesas. Nenhum desses valores representa saldo bancário.
+- As sugestões usam palavras-chave separadas por vírgulas, ignorando acentos e diferenças entre maiúsculas e minúsculas. Em múltiplas correspondências, a primeira categoria cadastrada é sugerida. O estabelecimento pode ser extraído do trecho após “no”, “na” ou “em”; revise antes de aplicar. Não há serviço externo nem inteligência artificial conectada.
+
 - Inclusões, edições, exclusões e restaurações só são confirmadas após a gravação local. Em caso de erro, os dados anteriores são preservados e o formulário permanece aberto.
 - Dados locais inválidos ou inacessíveis geram aviso persistente e bloqueiam gravações, sem substituir o conteúdo por exemplos. Preserve uma cópia do armazenamento antes de investigar; após resolver a causa, recarregue a página. Não há reparo automático.
 - Alterações detectadas no armazenamento de outra aba impedem a gravação até recarregar. Isso não garante sincronização ou resolução de gravações simultâneas.
@@ -102,7 +116,7 @@ O site não exige backend, banco online ou segredos. A compatibilidade local e a
 - Limpar o armazenamento pode apagar os registros. Trocar de navegador, dispositivo, endereço ou porta pode apresentar outro conjunto de dados.
 - Não há autenticação, backend, banco online, integração bancária ou sincronização entre dispositivos.
 - Não há backup automático, importação de CSV ou recuperação remota.
-- Contas e categorias são fixas; a listagem não tem paginação.
+- A listagem não tem paginação. Contas e categorias são configuráveis; a última categoria de cada tipo deve ser mantida.
 - O resultado por conta representa a movimentação líquida do mês, sem conciliação ou saldo inicial. Não há distinção entre previsto e realizado.
 - O armazenamento local não oferece proteção contra outras pessoas com acesso ao mesmo perfil de navegador.
 - Não inclua arquivos .env, bancos, exportações, backups, tokens ou chaves no repositório. Revise os arquivos antes de cada envio; o .gitignore não substitui essa revisão.

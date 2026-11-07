@@ -1,12 +1,412 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1220"><meta name="description" content="Gestor Financeiro — demonstração interativa de controle financeiro pessoal."><title>Gestor Financeiro | Dashboard</title><link rel="stylesheet" href="styles.css"></head>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Gestor Financeiro — demonstração interativa de controle financeiro pessoal.">
+<title>Gestor Financeiro | Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
 <body>
 <div class="shell">
-<aside class="sidebar" id="sidebar"><div class="brand"><div class="brand-mark">◈</div><div><strong>Gestor<span>Financeiro</span></strong><small>CONTROLE INTELIGENTE</small></div></div><div class="side-label">MENU PRINCIPAL</div><nav aria-label="Navegação principal"><button class="nav-item active" data-view="dashboard"><span>▦</span> Visão geral</button><button class="nav-item" data-view="transactions"><span>⇄</span> Transações</button><button class="nav-item" data-view="reports"><span>▥</span> Relatórios</button></nav><div class="side-bottom"><div class="demo-note"><span class="demo-dot"></span><b>Ambiente de demonstração</b><p>Dados fictícios salvos somente neste navegador.</p></div><button class="reset-link" id="resetData">↺ Restaurar dados de exemplo</button></div></aside>
-<div class="main-wrap"><header class="topbar"><button class="menu-toggle" id="menuToggle" aria-label="Abrir menu">☰</button><div class="crumb">Workspace <span>/</span> <b id="crumbTitle">Visão geral</b></div><div class="top-actions"><span class="demo-pill">● DEMO ONLINE</span><div class="avatar" aria-label="Usuário de demonstração">GF</div></div></header>
-<main class="content"><p id="storageWarning" class="storage-warning hidden" role="alert"></p><div class="page-heading"><div><p class="eyebrow">PAINEL FINANCEIRO</p><h1 id="pageTitle">Visão geral</h1><p class="subtitle" id="pageSubtitle">Acompanhe suas finanças em um só lugar.</p></div><div class="heading-actions"><button class="btn secondary" id="exportBtn">↓ Exportar CSV</button><button class="btn primary" id="addBtn">＋ Nova transação</button></div></div>
-<section id="dashboardView" class="view"><div class="filter-row"><label for="monthFilter">Período</label><input type="month" id="monthFilter"><span class="hint">Os indicadores refletem o mês selecionado</span></div><div class="stats-grid"><article class="stat-card"><div class="stat-head"><span>Receitas do mês</span><span class="stat-icon green">↗</span></div><strong id="incomeTotal">R$ 0,00</strong><p>Entradas registradas</p></article><article class="stat-card"><div class="stat-head"><span>Despesas do mês</span><span class="stat-icon red">↘</span></div><strong id="expenseTotal">R$ 0,00</strong><p>Saídas registradas</p></article><article class="stat-card dark"><div class="stat-head"><span>Saldo do mês</span><span class="stat-icon pale">◈</span></div><strong id="balanceTotal">R$ 0,00</strong><p>Receitas menos despesas</p></article></div><div class="chart-grid"><article class="panel"><div class="panel-heading"><div><h2>Fluxo financeiro</h2><p>Receitas e despesas dos últimos 6 meses</p></div><div class="legend"><span><i class="key income"></i>Receitas</span><span><i class="key expense"></i>Despesas</span></div></div><div class="bar-chart" id="flowChart" aria-label="Gráfico de receitas e despesas"></div></article><article class="panel"><div class="panel-heading"><div><h2>Despesas por categoria</h2><p>Distribuição no período</p></div></div><div class="category-chart"><div class="donut" id="donut"><div class="donut-center"><small>Total</small><b id="donutTotal">R$ 0</b></div></div><div class="category-list" id="categoryList"></div></div></article></div><article class="panel recent-panel"><div class="panel-heading"><div><h2>Últimas transações</h2><p>Movimentações mais recentes do período</p></div><button class="text-btn" id="seeAll">Ver todas →</button></div><div class="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Conta</th><th class="align-right">Valor</th></tr></thead><tbody id="recentRows"></tbody></table></div></article></section>
-<section id="transactionsView" class="view hidden"><article class="panel"><div class="panel-heading stack-mobile"><div><h2>Histórico de transações</h2><p>Pesquise, filtre, edite ou exclua seus lançamentos.</p></div><div class="table-filters"><input id="searchInput" placeholder="Buscar descrição..." aria-label="Buscar transações"><select id="typeFilter" aria-label="Filtrar tipo"><option value="all">Todos os tipos</option><option value="income">Receitas</option><option value="expense">Despesas</option></select></div></div><div class="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Conta</th><th class="align-right">Valor</th><th class="align-right">Ações</th></tr></thead><tbody id="allRows"></tbody></table></div><div class="table-footer" id="transactionCount"></div></article></section>
-<section id="reportsView" class="view hidden"><div class="report-grid"><article class="panel"><div class="panel-heading"><div><h2>Resumo por categoria</h2><p>Despesas no mês selecionado</p></div></div><div id="reportCategories"></div></article><article class="panel"><div class="panel-heading"><div><h2>Resumo por conta</h2><p>Movimentações do mês selecionado</p></div></div><div id="reportAccounts"></div></article></div><article class="panel report-tip"><h2>Sobre os relatórios</h2><p>Altere o período na Visão geral para analisar outro mês. Exporte os lançamentos para CSV usando o botão no topo. Os valores são demonstrativos e não representam movimentações reais.</p></article></section>
-<footer>Gestor Financeiro <span>•</span> Projeto demonstrativo para portfólio <span>•</span> Dados locais, sem conexão bancária</footer></main></div></div>
-<div class="modal-backdrop hidden" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-top"><div><p class="eyebrow">LANÇAMENTO FINANCEIRO</p><h2 id="modalTitle">Nova transação</h2></div><button class="close-btn" id="closeModal" aria-label="Fechar">✕</button></div><form id="transactionForm"><input type="hidden" id="editId"><div class="form-grid"><label class="full">Descrição<input id="description" maxlength="80" required placeholder="Ex.: Compras no supermercado"></label><label>Tipo<select id="entryType"><option value="expense">Despesa</option><option value="income">Receita</option></select></label><label>Valor (R$)<input id="amount" type="number" min="0.01" max="999999999" step="0.01" required placeholder="0,00"></label><label>Categoria<select id="category" required></select></label><label>Conta<select id="account" required></select></label><label class="full">Data<input id="entryDate" type="date" required></label></div><div class="modal-actions"><button type="button" class="btn secondary" id="cancelModal">Cancelar</button><button type="submit" class="btn primary">Salvar transação</button></div></form></div></div><div id="toast" class="toast" role="status" aria-live="polite"></div><script src="app.js" defer></script></body></html>
+<aside class="sidebar" id="sidebar">
+<div class="brand">
+<div class="brand-mark">◈</div>
+<div>
+<strong>gestor<span>financeiro</span>
+</strong>
+<small>POR MICHEL FIQUENE</small>
+</div>
+</div>
+<div class="side-label">SEU ESPAÇO FINANCEIRO</div>
+<nav aria-label="Navegação principal">
+<button class="nav-item active" data-view="dashboard">
+<span>▦</span> Visão geral</button>
+<button class="nav-item" data-view="transactions">
+<span>⇄</span> Transações</button>
+<button class="nav-item" data-view="accounts">
+<span>▣</span> Contas</button>
+<button class="nav-item" data-view="categories">
+<span>◇</span> Categorias</button>
+<button class="nav-item" data-view="reports">
+<span>▥</span> Resumo mensal</button>
+</nav>
+<div class="side-bottom">
+<div class="demo-note">
+<span class="demo-dot">
+</span>
+<b>Ambiente de demonstração</b>
+<p>Dados fictícios salvos somente neste navegador.</p>
+</div>
+<button class="reset-link" id="resetData">↺ Restaurar dados de exemplo</button>
+</div>
+</aside>
+<div class="main-wrap">
+<header class="topbar">
+<button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+<div class="crumb">Meu espaço <span>/</span>
+<b id="crumbTitle">Visão geral</b>
+</div>
+<div class="top-actions">
+<span class="demo-pill">● Dados fictícios</span>
+<div class="avatar" aria-label="Usuário de demonstração">GF</div>
+</div>
+</header>
+<main class="content">
+<p id="storageWarning" class="storage-warning hidden" role="alert">
+</p>
+<div class="page-heading">
+<div>
+<p class="eyebrow">ORGANIZAÇÃO QUE FAZ SENTIDO</p>
+<h1 id="pageTitle">Visão geral</h1>
+<p class="subtitle" id="pageSubtitle">Acompanhe suas finanças em um só lugar.</p>
+</div>
+<div class="heading-actions">
+<div class="month-control">
+<button id="prevMonth" aria-label="Mês anterior">‹</button>
+<label class="sr-only" for="monthFilter">Período</label>
+<input type="month" id="monthFilter" min="0001-01" max="9999-12">
+<button id="nextMonth" aria-label="Próximo mês">›</button>
+</div>
+<button id="manageAdd" class="btn primary hidden">Novo cadastro</button>
+<button class="btn secondary" id="exportBtn">↓ Exportar CSV</button>
+<button class="btn primary" id="addBtn">＋ Nova transação</button>
+</div>
+</div>
+<div class="demo-banner">ⓘ <span>
+<b>Uma demonstração, muitas possibilidades.</b> Explore à vontade: todos os dados são fictícios e ficam neste navegador.</span>
+</div>
+<section id="dashboardView" class="view">
+<div class="dashboard-stats">
+<article class="stat-card">
+<div class="stat-head">
+<span>Despesas do mês</span>
+<span class="stat-icon">▣</span>
+</div>
+<strong id="expenseTotal">R$ 0,00</strong>
+<p id="expenseComparison">Saídas registradas</p>
+</article>
+<div id="extraStats" class="stats-contents">
+</div>
+</div>
+<div class="balance-grid">
+<article class="stat-card">
+<div class="stat-head">
+<span>Receitas do mês</span>
+<span class="stat-icon green">↗</span>
+</div>
+<strong id="incomeTotal">R$ 0,00</strong>
+<p>Entradas registradas</p>
+</article>
+<article class="stat-card">
+<div class="stat-head">
+<span>Resultado líquido do mês</span>
+<span class="stat-icon">◇</span>
+</div>
+<strong id="balanceTotal">R$ 0,00</strong>
+<p>Receitas menos despesas · não representa saldo bancário</p>
+</article>
+</div>
+<div class="chart-grid">
+<article class="panel">
+<div class="panel-heading">
+<div>
+<h2>Despesas ao longo do mês</h2>
+<p>Seus lançamentos, dia a dia</p>
+</div>
+<div class="legend">
+<span>
+<i class="key income">
+</i>Despesas</span>
+</div>
+</div>
+<div id="dailyChart">
+</div>
+</article>
+<article class="panel">
+<div class="panel-heading">
+<div>
+<h2>Por categoria</h2>
+<p>Como suas despesas se distribuem</p>
+</div>
+</div>
+<div id="categoryList" class="category-list">
+</div>
+</article>
+</div>
+<div class="chart-grid flow-grid">
+<article class="panel">
+<div class="panel-heading">
+<div>
+<h2>Fluxo financeiro</h2>
+<p>Receitas e despesas dos últimos 6 meses</p>
+</div>
+<div class="legend">
+<span>
+<i class="key income">
+</i>Receitas</span>
+<span>
+<i class="key expense">
+</i>Despesas</span>
+</div>
+</div>
+<div class="bar-chart" id="flowChart" aria-label="Gráfico de receitas e despesas">
+</div>
+</article>
+<article class="panel">
+<div class="panel-heading">
+<div>
+<h2>Despesas por categoria</h2>
+<p>Distribuição no período</p>
+</div>
+</div>
+<div class="category-chart">
+<div class="donut" id="donut">
+<div class="donut-center">
+<small>Total</small>
+<b id="donutTotal">R$ 0</b>
+</div>
+</div>
+<div class="category-list hidden" id="donutLegend">
+</div>
+</div>
+</article>
+</div>
+<article class="panel recent-panel">
+<div class="panel-heading">
+<div>
+<h2>Últimas transações</h2>
+<p>Movimentações mais recentes do período</p>
+</div>
+<button class="text-btn" id="seeAll">Ver todas →</button>
+</div>
+<div class="table-scroll">
+<table>
+<thead>
+<tr>
+<th>Descrição</th>
+<th>Estabelecimento</th>
+<th>Categoria</th>
+<th>Conta</th>
+<th>Data</th>
+<th class="align-right">Valor</th>
+</tr>
+</thead>
+<tbody id="recentRows">
+</tbody>
+</table>
+</div>
+</article>
+</section>
+<section id="transactionsView" class="view hidden">
+<article class="panel">
+<div class="panel-heading stack-mobile transaction-heading">
+<div>
+<h2>Histórico de transações</h2>
+<p>Pesquise, filtre, edite ou exclua seus lançamentos.</p>
+</div>
+<div class="table-filters">
+<label>Buscar<input id="searchInput" placeholder="Descrição, estabelecimento ou valor" aria-label="Buscar transações">
+</label>
+<label>Tipo<select id="typeFilter" aria-label="Filtrar tipo">
+<option value="all">Todos os tipos</option>
+<option value="income">Receitas</option>
+<option value="expense">Despesas</option>
+</select>
+</label>
+<label>Categoria<select id="categoryFilter">
+</select>
+</label>
+<label>Conta<select id="accountFilter">
+</select>
+</label>
+</div>
+</div>
+<div class="table-scroll">
+<table>
+<thead>
+<tr>
+<th>Descrição</th>
+<th>Estabelecimento</th>
+<th>Categoria</th>
+<th>Conta</th>
+<th>Data</th>
+<th class="align-right">Valor</th>
+<th class="align-right">Ações</th>
+</tr>
+</thead>
+<tbody id="allRows">
+</tbody>
+</table>
+</div>
+<div class="table-footer" id="transactionCount">
+</div>
+</article>
+</section>
+<section id="accountsView" class="view hidden">
+<div id="accountsGrid" class="catalog-grid">
+</div>
+<p class="catalog-note">ⓘ Os valores representam receitas e despesas registradas, não saldos bancários.</p>
+</section>
+<section id="categoriesView" class="view hidden">
+<div id="categoriesGrid" class="catalog-grid">
+</div>
+</section>
+<section id="reportsView" class="view hidden">
+<div id="summaryStats" class="summary-grid">
+</div>
+<p id="summaryInsight" class="summary-insight">
+</p>
+<div class="chart-grid">
+<article class="panel">
+<div class="panel-heading">
+<div>
+<h2>Últimos seis meses</h2>
+<p>Receitas e despesas · valores em reais</p>
+</div>
+<div class="legend"><span><i class="key income"></i>Receitas</span><span><i class="key expense"></i>Despesas</span></div>
+</div>
+<div id="summaryFlow" class="bar-chart">
+</div>
+</article>
+<article class="panel">
+<div class="panel-heading">
+<div>
+<h2>Por categoria</h2>
+<p>Como suas despesas se distribuem</p>
+</div>
+</div>
+<div id="summaryCategories" class="category-list">
+</div>
+</article>
+</div>
+<div class="report-grid">
+<article class="panel">
+<div class="panel-heading">
+<div>
+<h2>Resumo por categoria</h2>
+<p>Despesas no mês selecionado</p>
+</div>
+</div>
+<div id="reportCategories">
+</div>
+</article>
+<article class="panel">
+<div class="panel-heading">
+<div>
+<h2>Resumo por conta</h2>
+<p>Movimentações do mês selecionado</p>
+</div>
+</div>
+<div id="reportAccounts">
+</div>
+</article>
+</div>
+<article class="panel report-tip">
+<h2>Sobre os relatórios</h2>
+<p>Altere o período no topo de qualquer página para analisar outro mês. Exporte os lançamentos para CSV usando o botão no topo. Os valores são demonstrativos e não representam movimentações reais.</p>
+</article>
+</section>
+<footer>Gestor Financeiro · Michel Fiquene <span>•</span> Projeto demonstrativo para portfólio <span>•</span> Dados locais, sem conexão bancária</footer>
+</main>
+</div>
+</div>
+<div class="modal-backdrop hidden" id="modalBackdrop">
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+<div class="modal-top">
+<div>
+<p class="eyebrow">LANÇAMENTO FINANCEIRO</p>
+<h2 id="modalTitle">Nova transação</h2>
+</div>
+<button class="close-btn" id="closeModal" aria-label="Fechar">✕</button>
+</div>
+<form id="transactionForm">
+<input type="hidden" id="editId">
+<div class="form-grid">
+<label class="full">Descrição<input id="description" maxlength="80" required placeholder="Ex.: Compras no supermercado">
+</label>
+<div class="suggestion full">
+<p id="suggestionText" role="status">
+</p>
+<div>
+<button type="button" class="text-btn" id="detectBtn">Detectar</button>
+<button type="button" class="text-btn" id="applySuggestion">Aplicar sugestão</button>
+</div>
+</div>
+<label>Tipo<select id="entryType">
+<option value="expense">Despesa</option>
+<option value="income">Receita</option>
+</select>
+</label>
+<label>Valor (R$)<input id="amount" type="number" min="0.01" max="999999999" step="0.01" required placeholder="0,00">
+</label>
+<label>Categoria<select id="category" required>
+</select>
+</label>
+<label>Conta<select id="account" required>
+</select>
+</label>
+<label class="full">Data<input id="entryDate" type="date" required>
+</label>
+</div>
+<label class="merchant-label">Estabelecimento · opcional<input id="establishment" maxlength="80" placeholder="Nome fictício do estabelecimento">
+</label>
+<p class="privacy-note">Use apenas dados fictícios nesta demonstração.</p>
+<div class="modal-actions">
+<button type="button" class="btn secondary" id="cancelModal">Cancelar</button>
+<button type="submit" class="btn primary">Salvar transação</button>
+</div>
+</form>
+</div>
+</div>
+<div class="modal-backdrop hidden" id="entityBackdrop">
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="entityTitle">
+<div class="modal-top">
+<h2 id="entityTitle">Cadastro</h2>
+<button id="entityClose" class="close-btn" aria-label="Fechar cadastro">✕</button>
+</div>
+<p id="entityMessage" class="privacy-note">
+</p>
+<form id="entityForm">
+<fieldset id="entityFields" class="form-grid">
+<label class="full">Nome<input id="entityName" maxlength="60" required>
+</label>
+<label>Tipo<select id="entityType">
+</select>
+</label>
+<label>Cor<input id="entityColor" type="color" value="#4275f5">
+</label>
+<label>Ícone<select id="entityIcon">
+<option>▣</option>
+<option>▢</option>
+<option>⌂</option>
+<option>◇</option>
+<option>♧</option>
+<option>♡</option>
+<option>▥</option>
+<option>▧</option>
+<option>▤</option>
+<option>○</option>
+</select>
+</label>
+<label id="keywordsLabel" class="full">Palavras-chave separadas por vírgulas<textarea id="entityKeywords" maxlength="500" rows="3">
+</textarea>
+</label>
+</fieldset>
+<label id="replacementLabel" class="merchant-label hidden">Transferir lançamentos para<select id="replacement">
+</select>
+</label>
+<div class="modal-actions">
+<button id="entityCancel" type="button" class="btn secondary">Cancelar</button>
+<button type="submit" class="btn primary">Confirmar</button>
+</div>
+</form>
+</div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite">
+</div>
+<script src="app.js" defer>
+</script>
+</body>
+</html>

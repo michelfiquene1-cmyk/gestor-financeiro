@@ -63,7 +63,7 @@ Não são bloqueadores da demonstração atual e dependem de definição e autor
 - **Backup e importação:** exportação de backup estruturado e restauração com validação, tratamento de duplicidades e confirmação antes de substituir dados.
 - **Filtros por período:** seleção clara e consistente em transações, relatórios e exportação; indicar quando a exportação inclui todo o histórico.
 - **Paginação:** limitar registros renderizados e manter busca, ordenação e contagem coerentes.
-- **Categorias e contas configuráveis:** permitir manutenção sem invalidar transações existentes e com validação de nomes e referências.
+- **Categorias e contas configuráveis:** implementadas na evolução local V3 descrita adiante; aprovação visual e publicação ainda pendentes.
 
 ## Limitações atuais
 
@@ -71,8 +71,8 @@ Não são bloqueadores da demonstração atual e dependem de definição e autor
 - Não há autenticação, backend, banco de dados online ou sincronização entre dispositivos ou abas por mecanismo implementado pela aplicação.
 - Não há integração bancária, controle de permissões, recuperação remota ou garantia de backup.
 - A exportação CSV não pode ser reimportada pela interface.
-- Categorias e contas são fixas no código; a listagem não tem paginação.
-- O período é selecionado na Visão geral e afeta dashboard e relatórios. A listagem e o CSV abrangem todo o histórico.
+- Categorias e contas são configuráveis na evolução local V3; a listagem não tem paginação.
+- O período é selecionado no cabeçalho de qualquer tela e afeta dashboard, cartões e relatórios. A listagem e o CSV abrangem todo o histórico.
 - O resultado por conta é a movimentação líquida do mês, não um saldo bancário conciliado ou acumulado.
 - Lançamentos futuros entram nos totais do mês; não há distinção entre previsto e realizado.
 - A aplicação deve ser apresentada como demonstração com dados fictícios, sem promessa de adequação ao uso financeiro real.
@@ -145,6 +145,46 @@ Os itens abaixo distinguem verificações locais concluídas e validações aind
 - [ ] Na URL publicada, navegação, transações, armazenamento, gráficos e download do CSV funcionam com dados fictícios; evidências e eventuais limitações são registradas.
 
 ## Registro de decisões
+
+### Aprovação e preparação da publicação V3 — 7 de novembro de 2026
+
+O usuário aprovou o visual no Live Server e autorizou commits, integração à `main`, push para `michelfiquene1-cmyk/gestor-financeiro` e atualização do site Netlify existente. Essa autorização substitui a restrição da etapa local anterior, sem autorizar outro repositório, site ou domínio.
+
+- Identidade autenticada confirmada pela API `/user` do GitHub: `michelfiquene1-cmyk`. Repositório público, branch padrão `main`, permissão de escrita confirmada.
+- Sintaxe, 19 cenários de regressão e teste Chrome isolado executados novamente com sucesso antes da integração. Migração preserva a chave V1; retorno ao código anterior continua possível pelo histórico Git, sem apagar a chave V3. Edições V3 não são convertidas para o formato V1.
+- Auditoria de publicação limita o conteúdo aos arquivos de código, documentação, configuração e testes do projeto. Capturas `.preview/`, dados do navegador, downloads e credenciais não devem entrar no commit.
+- O teste de navegador aceita `GESTOR_TEST_URL` somente para o endereço Netlify existente, permitindo repetir os cenários no conteúdo publicado com perfil temporário isolado.
+- A confirmação do commit remoto, do deploy e dos cabeçalhos HTTP deve ocorrer depois do push. Não considerar esta preparação, por si só, como prova de publicação concluída.
+
+### Evolução local V3 — 7 de novembro de 2026
+
+Escopo autorizado: combinar a base funcional da V1 com as sete capturas da V3. A referência online não pôde ser acessada. Branch local: `redesign/v3-evolucao-local`. Sem commit, push ou deploy; aprovação do usuário ainda necessária para publicação.
+
+Implementado nesta etapa:
+
+- Menu branco com cinco telas, ícones vetoriais locais, seleção azul-clara, cartões brancos, tabelas e modais responsivos. Nenhuma biblioteca ou serviço externo foi incluído.
+- Quatro indicadores da referência, além de receitas e resultado líquido da V1; gráfico diário com alternativa textual, fluxo dos seis meses e distribuição por categoria com cores configuráveis.
+- Estabelecimento opcional nos lançamentos e no CSV. Pesquisa por descrição, estabelecimento ou valor e filtros combinados de tipo, categoria e conta. Listagem e CSV continuam abrangendo todo o histórico.
+- Cadastro, edição e exclusão de contas e categorias. Renomeações atualizam o histórico na mesma gravação. Exclusões com referências exigem destino válido, do mesmo tipo para categorias. A última categoria de cada tipo é preservada; categorias utilizadas não mudam entre receita e despesa.
+- Total movimentado por conta = receitas + despesas, quantidade e participação sobre essa mesma base. Resultado líquido por conta continua disponível nos relatórios. Nenhum desses valores representa saldo bancário.
+- Palavras-chave configuráveis e detecção sem distinção de acentos/caixa. A primeira correspondência é sugerida; aplicação exige botão explícito. Estabelecimento pode ser sugerido do trecho após “no”, “na” ou “em”, sem substituir um campo já preenchido.
+- Resumo mensal com comparativo de despesas, média, categoria principal, contas utilizadas, fluxo e relatórios da V1. Sem base anterior, a interface informa a ausência em vez de apresentar um percentual inválido.
+- Migração preguiçosa: lê V1 sem gravar; a primeira alteração confirmada salva um documento `{version: 3, catalog, transactions}` em uma chave V3 separada. A chave V1 permanece intacta. Validação, detecção de mudanças externas e tratamento de falhas abrangem transações e cadastros. O documento inteiro é salvo em uma única operação e conferido por leitura antes da confirmação.
+
+Evidências locais:
+
+- `node --check` nos três arquivos JavaScript e 19 cenários de regressão aprovados. Incluem os 13 cenários originais, migração/releitura, contas, categorias, transferências, falhas e gravação não confirmada, estabelecimento, filtros, CSV e comparações sem base.
+- Chrome headless isolado: cadastro/edição, contas e categorias, transferência, sugestão aplicada explicitamente, pesquisa/filtros, recarga, download CSV e falhas de armazenamento exercitados. Chave V1 conferida intacta após gravações na V3.
+- Teclado: foco inicial, Tab/Shift+Tab, Escape e retorno ao acionador nos modais; menu móvel com estado expandido e navegação verificados. Não equivale a teste com leitor de tela.
+- Geometria das cinco telas e dos dois tipos de modal verificada em 320, 390, 760 e 1440 pixels. Capturas locais de dashboard desktop/móvel, tabelas, contas, categorias, resumo e formulários inspecionadas. Não equivale a teste em dispositivo físico.
+- Capturas de teste em `.preview/`, ignorada pelo Git. O perfil do Chrome e downloads permanecem temporários e isolados do perfil pessoal.
+
+Limitações e validações pendentes:
+
+- As capturas não mostram todos os estados da V3 nem uma versão móvel; a adaptação móvel foi implementada e testada localmente. Fidelidade visual final depende da aprovação do usuário.
+- V1 e V3 não sincronizam suas chaves após a primeira gravação V3. Não há mesclagem automática, importação ou backup remoto. Abas simultâneas continuam sem transação atômica entre processos.
+- Sugestões são regras locais simples, sujeitas a ambiguidades; não são classificação garantida nem integração com estabelecimentos reais.
+- Validações em Excel/LibreOffice, leitor de tela, outros motores e dispositivos físicos continuam pendentes. As pendências de publicação anteriores permanecem abertas.
 
 | Data | Decisão | Justificativa e impacto |
 | --- | --- | --- |
